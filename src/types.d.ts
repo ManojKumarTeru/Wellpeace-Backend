@@ -7,3 +7,13 @@ type AuthResponse = {
   message: string;
   user: User;
 };
+
+interface IProduct{
+  _id:string;
+  name:string;
+  description:string;
+  price:number;
+  rating:number;
+  imageUrl:string;
+  buyUrl:string;
+}

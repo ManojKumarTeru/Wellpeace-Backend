@@ -2,6 +2,7 @@ import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import authRouter from "./routes/auth";
+import productsRouter from "./routes/products";
 import cors from "cors";
 import admin from "firebase-admin";
 import { initializeApp } from "firebase-admin/app";
@@ -12,11 +13,14 @@ export const Admin = admin;
 const credential = Admin.credential;
 
 const DATABASE_URL = process.env.DB_ADDRESS;
-const PORT = process.env.PORT || 3000;
+const PORT =  process.env.PORT || 3000;
 
 if (!DATABASE_URL) {
   throw new Error("DATABASE_URL is required. ");
 }
+
+
+
 
 app.get("/", (_, res) => {
   res.send("Welcome to wellpeace.");
@@ -25,7 +29,7 @@ app.get("/", (_, res) => {
 mongoose
   .connect(DATABASE_URL)
   .then(() => {
-    app.listen(PORT, () => {
+    app.listen(PORT ,() => {
       console.log(`WellPeace server is running at http://localhost:${PORT}`);
     });
   })
@@ -38,6 +42,7 @@ app.use(express.urlencoded({ limit: "30mb", extended: true }));
 app.use(cors());
 
 app.use("/auth", authRouter);
+app.use("/products", productsRouter);
 
 initializeApp({
   credential: credential.cert({
@@ -48,4 +53,3 @@ initializeApp({
   databaseURL:
     "https://wellpeace-f0719-default-rtdb.europe-west1.firebasedatabase.app",
 });
-

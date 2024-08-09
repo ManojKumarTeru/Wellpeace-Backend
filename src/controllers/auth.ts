@@ -5,6 +5,7 @@ import { UserModel } from "../models/auth";
 import { hash as HashPassword, compare as ComparePassword } from "bcryptjs";
 import dotenv from "dotenv";
 import { getAuth } from "firebase-admin/auth";
+import { Admin } from "..";
 
 dotenv.config();
 // ################################################## SIGNUP HANDLER #################################################
@@ -31,6 +32,7 @@ export const signup = async (req: Request, res: Response) => {
       return;
     }
     const f_user = await getAuth().verifyIdToken(token);
+    console.log(f_user);
     if (!f_user.uid) {
       return res
         .status(404)
@@ -41,10 +43,11 @@ export const signup = async (req: Request, res: Response) => {
     }
     const password = await HashPassword(plainPassword, 10);
     const name = email.split("@")[0];
-    const newUser = await UserModel.create({ name, email, password });
+    const newUser = await UserModel.create({ name, email, password ,imageUrl:f_user.picture,uid:f_user.uid});
 
     const user = {
       uid: f_user.uid,
+      imageUrl: f_user.picture,
       _id: newUser._id,
       name: newUser.name,
       email: newUser.email,
@@ -78,6 +81,19 @@ export const login = async (req: Request, res: Response) => {
     }
     const { email, password,token } = validation.data;
 
+    const f_user = await getAuth().verifyIdToken(token);
+    console.log(f_user);
+    if (!f_user.uid) {
+      return res
+      .status(404)
+      .json({
+        message: "user not exist in our database.",
+        errors: ["user not exist."],
+      });
+    }
+    const  profile= (await Admin.auth().getUser(f_user.uid)).photoURL;
+    console.log(profile);
+
     const userAccount = await UserModel.findOne({ email });
     if (!userAccount) {
       return res.status(404).json({
@@ -86,15 +102,6 @@ export const login = async (req: Request, res: Response) => {
       });
     }
     
-    const f_user = await getAuth().verifyIdToken(token);
-    if (!f_user.uid) {
-      return res
-        .status(404)
-        .json({
-          message: "user not exist in our database.",
-          errors: ["user not exist."],
-        });
-    }
 
     const isPasswordCrt = await ComparePassword(password, userAccount.password);
     if (!isPasswordCrt) {
@@ -105,8 +112,10 @@ export const login = async (req: Request, res: Response) => {
 
     const user = {
       _id: userAccount._id,
+      uid:userAccount.uid,
       name: userAccount.name,
       email: userAccount.email,
+      imageUrl: userAccount.imageUrl,
       joinedAt: userAccount.joinedAt,
     };
 

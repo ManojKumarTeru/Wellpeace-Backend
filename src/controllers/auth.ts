@@ -5,7 +5,7 @@ import { UserModel } from "../models/auth";
 import { hash as HashPassword, compare as ComparePassword } from "bcryptjs";
 import dotenv from "dotenv";
 import { getAuth } from "firebase-admin/auth";
-import { Admin, emmiter } from "..";
+import { Admin } from "..";
 import cloudinary from "cloudinary";
 import { Readable } from "stream";
 
@@ -214,7 +214,31 @@ export const updateUserImage = async (req: Request, res: Response) => {
     readStream.push(fileBuffer);
     readStream.push(null);
     readStream.pipe(stream);
-    emmiter.listeners('event')
     return;
+  }
+};
+
+export const getUser = async (req: Request, res: Response) => {
+  try {
+    const {_id} = req.query;
+    console.log(req.query)
+    if (!_id) {
+      return res.status(401).json({ message: "Please provide _id." });
+    }
+    const userAccount = await UserModel.findById(_id);
+    if (!userAccount) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    const userInfo = {
+      _id: userAccount._id,
+      name: userAccount.name,
+      imageUrl: userAccount.imageUrl,
+      joinedAt: userAccount.joinedAt,
+      uid: userAccount.uid
+    };
+    res.status(200).json({ message: "user info get success", user: userInfo });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "internal server error" });
   }
 };

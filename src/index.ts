@@ -7,8 +7,7 @@ import cors from "cors";
 import admin from "firebase-admin";
 import { initializeApp } from "firebase-admin/app";
 import cloudinary from "cloudinary"
-import EventEmmiter from 'events';
-export const emmiter = new EventEmmiter();
+
 
 dotenv.config();
 const app: Express = express();

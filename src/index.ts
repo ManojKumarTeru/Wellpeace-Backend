@@ -6,6 +6,10 @@ import productsRouter from "./routes/products";
 import cors from "cors";
 import admin from "firebase-admin";
 import { initializeApp } from "firebase-admin/app";
+import cloudinary from "cloudinary"
+import EventEmmiter from 'events';
+export const emmiter = new EventEmmiter();
+
 dotenv.config();
 const app: Express = express();
 
@@ -19,6 +23,11 @@ if (!DATABASE_URL) {
   throw new Error("DATABASE_URL is required. ");
 }
 
+cloudinary.v2.config({
+  cloud_name: process.env.STORAGE,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
+});
 
 
 
@@ -53,3 +62,4 @@ initializeApp({
   databaseURL:
     "https://wellpeace-f0719-default-rtdb.europe-west1.firebasedatabase.app",
 });
+

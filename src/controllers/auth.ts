@@ -5,12 +5,12 @@ import { UserModel } from "../models/auth";
 import { hash as HashPassword, compare as ComparePassword } from "bcryptjs";
 import dotenv from "dotenv";
 import { getAuth } from "firebase-admin/auth";
-import { Admin } from "..";
+import { Admin, emmiter } from "..";
 import cloudinary from "cloudinary";
-import { userInfo } from "os";
 import { Readable } from "stream";
 
 dotenv.config();
+
 // ################################################## SIGNUP HANDLER #################################################
 export const signup = async (req: Request, res: Response) => {
   try {
@@ -167,9 +167,9 @@ export const updateUserName = async (req: Request, res: Response) => {
   }
 };
 
-export const updateUserImage =async (req: Request, res: Response) => {
-  const { files} = req;
-  const {token}=req.body;
+export const updateUserImage = async (req: Request, res: Response) => {
+  const { files } = req;
+  const { token } = req.body;
   if (!token) {
     return res.status(401).json({ message: "User token is not valid." });
   }
@@ -178,20 +178,20 @@ export const updateUserImage =async (req: Request, res: Response) => {
       .status(404)
       .json({ message: "Please provide profile imageLink." });
   }
-  const user=await Admin.auth().verifyIdToken(token);
+  const user = await Admin.auth().verifyIdToken(token);
   if (!user.uid) {
     return res.status(401).json({ message: "User not authenticated." });
   }
-  const userAccount=await UserModel.findOne({uid: user.uid});
+  const userAccount = await UserModel.findOne({ uid: user.uid });
 
   if (Array.isArray(files) && files.length > 0) {
-    cloudinary.v2.config({
-      cloud_name: process.env.STORAGE,
-      api_key: process.env.API_KEY,
-      api_secret: process.env.API_SECRET,
-    });
     const fileBuffer = files[0].buffer;
-    const stream = cloudinary.v2.uploader.upload_stream({ public_id:userAccount._id, resource_type: "auto", folder: "wellpeace/users profiles" },
+    const stream = cloudinary.v2.uploader.upload_stream(
+      {
+        public_id: userAccount._id,
+        resource_type: "auto",
+        folder: "wellpeace/users profiles",
+      },
       async (error, result) => {
         if (error) {
           console.log(error);
@@ -199,19 +199,22 @@ export const updateUserImage =async (req: Request, res: Response) => {
           return;
         }
         if (!result) {
-          res.status(500).json({message:"internal server error"});
+          res.status(500).json({ message: "internal server error" });
           return;
         }
         const imageUrl = result.url;
-        userAccount.imageUrl=imageUrl;
+        userAccount.imageUrl = imageUrl;
         await userAccount.save();
-        res.status(200).json({message: "User updated successfully",user:userAccount});
+        res
+          .status(200)
+          .json({ message: "User updated successfully", user: userAccount });
       }
     );
     const readStream = new Readable();
-    readStream.push(fileBuffer)
-    readStream.push(null)
-    readStream.pipe(stream)
-    return
+    readStream.push(fileBuffer);
+    readStream.push(null);
+    readStream.pipe(stream);
+    emmiter.listeners('event')
+    return;
   }
 };

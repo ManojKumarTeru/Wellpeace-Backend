@@ -6,6 +6,9 @@ import { hash as HashPassword, compare as ComparePassword } from "bcryptjs";
 import dotenv from "dotenv";
 import { getAuth } from "firebase-admin/auth";
 import { Admin } from "..";
+import cloudinary from "cloudinary";
+import { userInfo } from "os";
+import { Readable } from "stream";
 
 dotenv.config();
 // ################################################## SIGNUP HANDLER #################################################
@@ -34,16 +37,20 @@ export const signup = async (req: Request, res: Response) => {
     const f_user = await getAuth().verifyIdToken(token);
     console.log(f_user);
     if (!f_user.uid) {
-      return res
-        .status(404)
-        .json({
-          message: "user not exist in our database.",
-          errors: ["user not exist."],
-        });
+      return res.status(404).json({
+        message: "user not exist in our database.",
+        errors: ["user not exist."],
+      });
     }
     const password = await HashPassword(plainPassword, 10);
     const name = email.split("@")[0];
-    const newUser = await UserModel.create({ name, email, password ,imageUrl:f_user.picture,uid:f_user.uid});
+    const newUser = await UserModel.create({
+      name,
+      email,
+      password,
+      imageUrl: f_user.picture,
+      uid: f_user.uid,
+    });
 
     const user = {
       uid: f_user.uid,
@@ -79,19 +86,17 @@ export const login = async (req: Request, res: Response) => {
       res.status(400).json({ message: "validation error", errors });
       return;
     }
-    const { email, password,token } = validation.data;
+    const { email, password, token } = validation.data;
 
     const f_user = await getAuth().verifyIdToken(token);
     console.log(f_user);
     if (!f_user.uid) {
-      return res
-      .status(404)
-      .json({
+      return res.status(404).json({
         message: "user not exist in our database.",
         errors: ["user not exist."],
       });
     }
-    const  profile= (await Admin.auth().getUser(f_user.uid)).photoURL;
+    const profile = (await Admin.auth().getUser(f_user.uid)).photoURL;
     console.log(profile);
 
     const userAccount = await UserModel.findOne({ email });
@@ -101,7 +106,6 @@ export const login = async (req: Request, res: Response) => {
         errors: ["User with this email does not exist."],
       });
     }
-    
 
     const isPasswordCrt = await ComparePassword(password, userAccount.password);
     if (!isPasswordCrt) {
@@ -112,7 +116,7 @@ export const login = async (req: Request, res: Response) => {
 
     const user = {
       _id: userAccount._id,
-      uid:userAccount.uid,
+      uid: userAccount.uid,
       name: userAccount.name,
       email: userAccount.email,
       imageUrl: userAccount.imageUrl,
@@ -135,5 +139,79 @@ export const login = async (req: Request, res: Response) => {
       message: "Internal server error",
       errors: ["Internal server error"],
     });
+  }
+};
+
+export const updateUserName = async (req: Request, res: Response) => {
+  const { token, updatedUsername } = req.body;
+  if (!token || !updateUserName) {
+    return res.status(401).json({ message: "token or userName not found" });
+  }
+  try {
+    const user = await Admin.auth().verifyIdToken(token);
+    if (!user.uid) {
+      return res.status(401).json({ message: "user not authenticated" });
+    }
+    const userAccount = await UserModel.findOne({ uid: user.uid });
+    if (!userAccount) {
+      return res.status(404).json({ message: "user not found" });
+    }
+    userAccount.name = updatedUsername;
+    const updatedUser = await userAccount.save();
+    return res
+      .status(200)
+      .json({ message: "user updated successfully", user: updatedUser });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const updateUserImage =async (req: Request, res: Response) => {
+  const { files} = req;
+  const {token}=req.body;
+  if (!token) {
+    return res.status(401).json({ message: "User token is not valid." });
+  }
+  if (!files) {
+    return res
+      .status(404)
+      .json({ message: "Please provide profile imageLink." });
+  }
+  const user=await Admin.auth().verifyIdToken(token);
+  if (!user.uid) {
+    return res.status(401).json({ message: "User not authenticated." });
+  }
+  const userAccount=await UserModel.findOne({uid: user.uid});
+
+  if (Array.isArray(files) && files.length > 0) {
+    cloudinary.v2.config({
+      cloud_name: process.env.STORAGE,
+      api_key: process.env.API_KEY,
+      api_secret: process.env.API_SECRET,
+    });
+    const fileBuffer = files[0].buffer;
+    const stream = cloudinary.v2.uploader.upload_stream({ public_id:userAccount._id, resource_type: "auto", folder: "wellpeace/users profiles" },
+      async (error, result) => {
+        if (error) {
+          console.log(error);
+          res.status(500).json({ status: 500, message: error.message });
+          return;
+        }
+        if (!result) {
+          res.status(500).json({message:"internal server error"});
+          return;
+        }
+        const imageUrl = result.url;
+        userAccount.imageUrl=imageUrl;
+        await userAccount.save();
+        res.status(200).json({message: "User updated successfully",user:userAccount});
+      }
+    );
+    const readStream = new Readable();
+    readStream.push(fileBuffer)
+    readStream.push(null)
+    readStream.pipe(stream)
+    return
   }
 };

@@ -1,3 +1,4 @@
+import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 import { UserSchema } from "./zodSchemas/authSchema";
 import { z } from "zod";
 
@@ -16,4 +17,11 @@ interface IProduct{
   rating:number;
   imageUrl:string;
   buyUrl:string;
+}
+
+
+declare module 'express-serve-static-core' {
+    interface Request {
+        user?: DecodedIdToken;
+    }
 }

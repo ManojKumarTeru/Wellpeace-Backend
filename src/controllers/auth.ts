@@ -143,15 +143,16 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const updateUserName = async (req: Request, res: Response) => {
-  const { token, updatedUsername } = req.body;
-  if (!token || !updateUserName) {
-    return res.status(401).json({ message: "token or userName not found" });
+  const user=req.user;
+  if (!user) {
+    return res.status(401).json({message:"UnAuthorized"})
+  }
+  const {updatedUsername} = req.body;
+  if (!updateUserName) {
+    return res.status(401).json({ message: "Please Provide username." });
   }
   try {
-    const user = await Admin.auth().verifyIdToken(token);
-    if (!user.uid) {
-      return res.status(401).json({ message: "user not authenticated" });
-    }
+   
     const userAccount = await UserModel.findOne({ uid: user.uid });
     if (!userAccount) {
       return res.status(404).json({ message: "user not found" });
@@ -169,18 +170,14 @@ export const updateUserName = async (req: Request, res: Response) => {
 
 export const updateUserImage = async (req: Request, res: Response) => {
   const { files } = req;
-  const { token } = req.body;
-  if (!token) {
-    return res.status(401).json({ message: "User token is not valid." });
+  const user=req.user
+  if (!user) {
+    return res.status(401).json({ message: "UnAuthorized" });
   }
   if (!files) {
     return res
       .status(404)
       .json({ message: "Please provide profile imageLink." });
-  }
-  const user = await Admin.auth().verifyIdToken(token);
-  if (!user.uid) {
-    return res.status(401).json({ message: "User not authenticated." });
   }
   const userAccount = await UserModel.findOne({ uid: user.uid });
 

@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import authRouter from "./routes/auth";
 import productsRouter from "./routes/products";
+import videosRouter from './routes/videos'
 import cors from "cors";
 import admin from "firebase-admin";
 import { initializeApp } from "firebase-admin/app";
@@ -21,13 +22,6 @@ const PORT =  process.env.PORT || 3000;
 if (!DATABASE_URL) {
   throw new Error("DATABASE_URL is required. ");
 }
-
-cloudinary.v2.config({
-  cloud_name: process.env.STORAGE,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
-});
-
 
 
 app.get("/", (_, res) => {
@@ -51,6 +45,7 @@ app.use(cors());
 
 app.use("/auth", authRouter);
 app.use("/products", productsRouter);
+app.use("/videos", videosRouter);
 
 initializeApp({
   credential: credential.cert({
